@@ -95,9 +95,10 @@ class HabitManager: ObservableObject {
     func updateStreaks() {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
         
         for habit in habits {
-            guard let lastCompletion = (habit.completions as? Set<HabitCompletion>)?.max(by: { $0.wrappedTimestamp < $1.wrappedTimestamp })?.timestamp else {
+            guard let completions = habit.completions as? Set<HabitCompletion> else {
                 // No completions, reset streak
                 if habit.currentStreak > 0 {
                     habit.currentStreak = 0
@@ -106,28 +107,20 @@ class HabitManager: ObservableObject {
                 continue
             }
             
-            let lastCompletionDay = calendar.startOfDay(for: lastCompletion)
-            let daysSinceLastCompletion = calendar.dateComponents([.day], from: lastCompletionDay, to: today).day ?? 0
+            let completionDates = completions.map { calendar.startOfDay(for: $0.wrappedTimestamp) }
             
-            if daysSinceLastCompletion > 1 {
-                // Streak broken
-                habit.currentStreak = 0
-                updateHabit(habit)
-            } else if daysSinceLastCompletion == 1 {
-                // Check if habit was completed today
-                let completedToday = (habit.completions as? Set<HabitCompletion>)?.contains { completion in
-                    calendar.isDate(completion.wrappedTimestamp, inSameDayAs: today)
-                } ?? false
-                
-                if !completedToday {
-                    // Streak continues
-                    habit.currentStreak += 1
-                    if habit.currentStreak > habit.bestStreak {
-                        habit.bestStreak = habit.currentStreak
-                    }
+            let completedToday = completionDates.contains(today)
+            let completedYesterday = completionDates.contains(yesterday)
+            
+            // If not completed today and not completed yesterday, streak is broken
+            if !completedToday && !completedYesterday {
+                if habit.currentStreak > 0 {
+                    habit.currentStreak = 0
                     updateHabit(habit)
                 }
             }
+            // If completed yesterday but not today, streak is still active (grace period)
+            // If completed today, streak was already incremented in completeHabit()
         }
     }
     

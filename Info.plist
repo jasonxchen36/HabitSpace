@@ -42,6 +42,13 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.habitspace.refresh</string>
+		<string>com.habitspace.streakupdate</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict>

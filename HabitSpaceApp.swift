@@ -27,6 +27,9 @@ struct HabitSpaceApp: App {
                             // Request notification authorization when app launches
                             Task {
                                 await notificationManager.requestAuthorization()
+                                
+                                // Refresh all notifications to ensure they're scheduled
+                                await refreshAllHabitNotifications()
                             }
                             
                             // Load saved AR anchors
@@ -34,6 +37,9 @@ struct HabitSpaceApp: App {
                             
                             // Update streaks when app becomes active
                             habitManager.updateStreaks()
+                            
+                            // Schedule background tasks
+                            BackgroundTaskManager.shared.scheduleBackgroundTasks()
                         }
                 } else {
                     OnboardingView()
@@ -57,6 +63,21 @@ struct HabitSpaceApp: App {
             }
         }
     }
+    
+    // MARK: - Helper Methods
+    private func refreshAllHabitNotifications() async {
+        let habits = habitManager.habits
+        
+        for habit in habits {
+            if habit.reminderEnabled || habit.locationReminderEnabled {
+                do {
+                    try await notificationManager.scheduleNotification(for: habit)
+                } catch {
+                    print("Error scheduling notification for \(habit.wrappedName): \(error)")
+                }
+            }
+        }
+    }
 }
 
 // MARK: - App Delegate
@@ -68,7 +89,15 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Setup notification center delegate
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
         
+        // Register background tasks
+        BackgroundTaskManager.shared.registerBackgroundTasks()
+        
         return true
+    }
+    
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        // Schedule background tasks when app enters background
+        BackgroundTaskManager.shared.scheduleBackgroundTasks()
     }
     
     private func configureAppearance() {
